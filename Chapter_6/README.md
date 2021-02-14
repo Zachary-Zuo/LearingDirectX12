@@ -347,7 +347,7 @@ inputLayoutDesc =
 
 ## 3.2 第二题
 
-主要修改`IASetVertexBuffers`绑定的资源、布局以及着色器代码，BoxApp.cpp中查询“Change”即可找到修改的代码部分
+主要修改`IASetVertexBuffers`绑定的资源、布局以及着色器代码，查询“Change”即可找到修改的代码部分
 
 ![Exercise_2](\Image\Exercise_2.png)
 
@@ -482,3 +482,13 @@ VertexOut VS(VertexIn vin)
     return vout;
 }
 ```
+
+
+
+
+
+## 3.7 第七题
+
+BoxApp.cpp中查询“Change”即可找到修改的代码部分
+
+![Exercise_7](Image\Exercise_7.png)
