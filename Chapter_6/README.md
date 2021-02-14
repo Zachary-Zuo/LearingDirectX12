@@ -426,3 +426,59 @@ std::array<std::uint16_t, 18> indices =
 ```
 
 ![Exercise_4](Image\Exercise_4.png)
+
+
+
+## 3.5 第五题
+
+片元的坐标与颜色是通过顶点数据线性插值计算得出的。
+
+
+
+## 3.6 第六题
+
+将`GameTime::TotalTime()`利用常量缓冲区里传至着色器程序供其访问。
+
+
+
+首先在常量数据结构体中加入时间变量gTime。
+
+```cpp
+struct ObjectConstants
+{
+    XMFLOAT4X4 worldViewProj = MathHelper::Identity4x4();
+    float gTime = 0.0f;
+};
+```
+
+然后在Update函数中将gTime赋值。
+
+```cpp
+ObjectConstants objConstants;
+XMStoreFloat4x4(&objConstants.WorldViewProj, XMMatrixTranspose(worldViewProj));
+// add this line
+objConstants.gTime = gt.TotalTime();
+mObjectCB->CopyData(0, objConstants);
+```
+
+这样我们就能在着色器中拿到gTime，并做计算。注意：这里传入的是常量结构体副本，所以元素名可以自定义，但是元素顺序是和ObjectConstants结构体中定义的一致的。
+
+```cpp
+cbuffer cbPerObject : register(b0)
+{
+	float4x4 gWorldViewProj; 
+	float gTime;
+};
+VertexOut VS(VertexIn vin)
+{
+    VertexOut vout;
+    vin.PosL.xy += 0.5f * sin(vin.PosL.x) * sin(3.0f * gTime);
+    vin.PosL.z *= 0.6f + 0.4f * sin(2.0f * gTime);
+    
+    vout.PosH = mul(float4(vin.PosL, 1.0f), gWorldViewProj);
+   
+    vout.Color = vin.Color;
+    
+    return vout;
+}
+```
