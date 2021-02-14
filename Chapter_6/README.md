@@ -492,3 +492,185 @@ VertexOut VS(VertexIn vin)
 BoxApp.cpp中查询“Change”即可找到修改的代码部分
 
 ![Exercise_7](Image\Exercise_7.png)
+
+
+
+## 3.8 第八题
+
+这题的核心就是理解光栅器状态结构体D3D12_RASTERIZER*_*DESC里的D3D12_FILL*_*MODE元素，将其改成D3D12_FILL*_*MODE_WIREFRAME即可。D3D12_RASTERIZER*_*DESC是在PSO中设置的。
+
+```cpp
+psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
+```
+
+效果如下。
+
+（注意：第3题中的`IASetPrimitiveTopology`函数设置成LINESTRIP也有类似的效果，但那个是直接绘制成线框效果，写死了，并且它是默认没有剔除的。）
+
+![Exercise_8](Image\Exercise_8.png)
+
+
+
+
+
+## 3.9 第九题
+
+此题主要理解CullMode的三种剔除模式。修改光栅器状态下的剔除模式即可。
+
+```cpp
+psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_FRONT;
+psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
+```
+
+不同剔除模式的效果如下。（从前到后分别为：不剔除、背面剔除、前面剔除）
+
+![Exercise_9](\Image\Exercise_9.png)
+
+
+
+## 3.10 第十题
+
+这题教我们如何缩减顶点颜色精度，从128位减少到32位。首先将Color的数据类型写成XMCOLOR，注意其在DirectX::PackedVector命名空间下。
+
+```cpp
+using namespace DirectX::PackedVector;
+struct Vertex
+{
+	XMFLOAT3 Pos;
+	XMCOLOR Color;
+};
+```
+
+然后我们更改D3D12_INPUT_ELEMENT_DESC中的Color格式。注意：格式为DXGI_FORMAT_B8G8R8A8_UNORM*，*因为DXGI_FORMAT符号所列的值在内存中是用小端字节序来表示的，所以从最低有效字节写至最高有效字节，格式ARGB被表示为BGRA。
+
+```cpp
+inputLayoutDesc =
+{
+	{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+    { "COLOR", 0, DXGI_FORMAT_B8G8R8A8_UNORM, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+};
+```
+
+
+
+
+
+## 3.11 第十一题
+
+(a)答案：没有问题。D3D12_INPUT_ELEMENT_DESC结构体数组中元素是可以交换顺序的。因为在描述元素时，写明了元素在Vertex结构体中的地址偏移，也绑定了相对应语义（详见第1题），从名称和地址来说都是相匹配的，所以D3D12_INPUT_ELEMENT_DESC类型的数组元素顺序的调换并不会影响什么。
+
+(b)答案：VertexIn结构体中元素顺序可以交换。因为VertexIn中的元素是通过D3D12_INPUT_ELEMENT_DESC结构体数组中的元素语义和地址来确定值的（归根揭底还是地址），既然前者可以改变位置，后者当然也能改变了。
+
+
+
+## 3.12 第十二题
+
+此题考查的是D3D12_VIEWPORT结构体元素。前四个元素确定了图形绘制的范围，TopLeftX和TopLeftY是后台缓冲区左上点的坐标，初始是（0，0），Width和Height是缓冲区的长宽，为了不产生图像拉伸缩放，这两个值和窗口的Width、Height是相等的。想要将视口对准缓冲区左半部分，即让图形绘制在缓冲区左半部分，我们只需更改TopLeftX，让绘制图形左移，实现中心点向四分位点的映射。
+
+```cpp
+mScreenViewport.TopLeftX = -static_cast<int>(clientWidth/4);
+mScreenViewport.TopLeftY = 0;
+mScreenViewport.Width    = static_cast<float>(mClientWidth);
+mScreenViewport.Height   = static_cast<float>(mClientHeight);
+mScreenViewport.MinDepth = 0.0f;
+mScreenViewport.MaxDepth = 1.0f;
+```
+
+效果如下：
+
+![Exercise_12](\Image\Exercise_12.png)
+
+
+
+## 3.13 第十三题
+
+继续修改其裁剪矩形，D3D12_RECT结构体4个元素划定了一个矩形，除这个矩形以外的所有区域都被裁剪，不显示像素。
+
+```cpp
+mScissorRect = { 0, 0, mClientWidth / 2, mClientHeight / 2 };
+```
+
+显示如下，上面代码限定了左上角矩形，所以左上角矩形以外的区域都被裁剪了。可以看到，背景色并没有被裁剪矩形所裁剪，这也是符合常理的，因为裁剪矩形的作用是裁剪绘制的物体，背景色并不是通过流水线绘制的。
+
+
+
+## 3.14 第十四题
+
+这题利用常量缓冲区传进着色器程序的gTime（第6题中有实现过程），来计算颜色值，使颜色随着时间而改变。这里的颜色值可以在顶点着色器也可以在像素着色器中计算。此案例我们在像素着色器中计算。
+
+```cpp
+float4 PS(VertexOut pin) : SV_Target
+{
+	float4 finalColor = pin.Color * ((sin(gTime) + 2) / 2 );
+	return finalColor;
+}
+```
+
+
+
+## 3.15 第十五题
+
+此题主要考察clip函数。意思是，如果A小于0，则剔除片元，即不显示像素。
+
+
+
+我们题中的代码如下，即顶点色的R通道减去0.5，再和0比，小于则不显示，反之则显示。这也是AlphaTest的基本原理，因为是分支判断，所以这种透明是无渐变的，要么全透要么不透。
+
+```cpp
+float4 PS(VertexOut pin) : SV_Target
+{
+	clip(pin.Color.r - 0.5f);
+	return pin.Color;
+}
+```
+
+显示结果如下，可以见到clip后，小于0的像素（本身就中等偏暗的像素）都被剔除了。
+
+![Exercise_12](\Image\Exercise_15.png)
+
+
+
+## 3.16 第十六题
+
+此题考查常量缓冲区传值以及着色器函数中的混合算法。
+
+首先通过常量缓冲区定义颜色数据，然后在Update函数中上传至GPU。
+
+```cpp
+struct ObjectConstants
+{
+	XMFLOAT4X4 worldViewProj = MathHelper::Identity4x4();
+	float gTime = 0.0f;
+	XMFLOAT4 gPulseColor;
+};
+
+void D3D12InitApp::Update(GameTime& gt)
+{
+    ......
+    objConstants.gPulseColor = XMFLOAT4(Colors::Gold);
+    objCB->CopyData(0, objConstants);
+}
+```
+
+然后在像素着色器中书写算法代码，首先将时间值转换成[0, 1]变化的值，然后用这个值去做两个颜色的混合Alpha。
+
+```cpp
+cbuffer cbPerObject : register(b0)
+{
+	float4x4 gWorldViewProj; 
+	float gTime;
+	float4 gPulseColor;
+};
+float4 PS(VertexOut pin) : SV_Target
+{
+	const float pi = 3.1415926;
+	float s = 0.5f * sin(2 * gTime - 0.25 * pi) + 0.5f;
+	float4 c = lerp(pin.Color, gPulseColor, s);
+	
+	return c;
+}
+```
+
+效果是在输入颜色（金色）和原本顶点色之间做混合渐变。
