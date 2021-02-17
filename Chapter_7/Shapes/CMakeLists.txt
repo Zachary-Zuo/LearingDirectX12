@@ -4,7 +4,7 @@
 cmake_minimum_required(VERSION 3.5)
 
 # Set the project name
-project (LandAndWaves)
+project (Shapes)
 
 add_definitions(-DUNICODE -D_UNICODE)
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS")
@@ -32,13 +32,13 @@ set(SOURCES
 )
 
 # Add an executable with the above sources
-add_executable(LandAndWaves ${SOURCES})
+add_executable(Shapes ${SOURCES})
 
 # Set the directories that should be included in the build command for this target
 # when running g++ these will be included as -I/directory/path/
-target_include_directories(LandAndWaves
+target_include_directories(Shapes
     PRIVATE 
         ${PROJECT_SOURCE_DIR}/include
 )
 
-#target_link_libraries(LandAndWaves ws2_32.lib)
+#target_link_libraries(Shapes ws2_32.lib)
